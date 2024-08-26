@@ -1,130 +1,58 @@
 import { useState } from 'react';
-import axios from 'axios';
 
 const DownloadPage = () => {
   const [url, setUrl] = useState('');
-  const [file, setFile] = useState(null);
-  const [results, setResults] = useState([]);
-  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [videoId, setVideoId] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleUrlChange = (e) => {
     setUrl(e.target.value);
   };
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const analyzeUrl = async () => {
-    // Envoyer l’URL au serveur pour analyse
-    try {
-      const response = await axios.post('http://localhost:3000/analyze', { url });
-      return response.data;
-    } catch (err) {
-      setError('Erreur lors de l\'analyse de l\'URL : ' + err.message);
-      throw err;
+  const handleStreamVideo = () => {
+    setLoading(true);
+    setError('');
+    // eslint-disable-next-line no-useless-escape
+    const idMatch = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^&\n]{11})/);
+    
+    if (idMatch) {
+      setVideoId(idMatch[1]);
+    } else {
+      setError('Veuillez entrer une URL YouTube valide.');
     }
-  };
-
-  const analyzeFile = async (file) => {
-    const formData = new FormData();
-    formData.append('video', file);
-
-    try {
-      const response = await axios.post('http://localhost:3000/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response.data;
-    } catch (err) {
-      setError('Erreur lors de l\'analyse du fichier : ' + err.message);
-      throw err;
-    }
-  };
-
-  const searchVideos = async (query) => {
-    const apiKey = 'YOUT_API_KEY';
-    const response = await axios.get(`https://www.googleapis.com/youtube/v3/search`, {
-      params: {
-        part: 'snippet',
-        q: query,
-        type: 'video',
-        key: apiKey,
-      },
-    });
-
-    return response.data.items.map(item => ({
-      id: item.id.videoId,
-      title: item.snippet.title,
-      url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-    }));
-  };
-
-  const handleSearch = async () => {
-    try {
-      let characteristics;
-
-      if (url) {
-        characteristics = await analyzeUrl();
-      } else if (file) {
-        characteristics = await analyzeFile(file);
-      } else {
-        setError('Veuillez entrer une URL ou sélectionner un fichier vidéo.');
-        return;
-      }
-
-      const query = `brightness:${characteristics.brightness} sceneChanges:${characteristics.sceneChanges}`;
-      const searchResults = await searchVideos(query);
-      setResults(searchResults);
-      setError(''); // Réinitialiser l'erreur
-    } catch {
-      // Erreur déjà gérée dans les fonctions d'analyse
-    }
-  };
-
-  const handlePreview = (videoUrl) => {
-    setSelectedVideo(videoUrl);
+    
+    setLoading(false);
   };
 
   return (
-    <div className="download-container">
-      <h2>Trouver la Vidéo Originale</h2>
+    <div className="max-w-lg mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-4">Streamer une Vidéo YouTube</h2>
       <input
         type="text"
-        placeholder="URL de la vidéo"
+        placeholder="URL de la vidéo YouTube"
         value={url}
         onChange={handleUrlChange}
+        className="w-full p-2 border border-gray-300 rounded mb-4"
       />
-      <input type="file" onChange={handleFileChange} />
-      <button className="download-btn" onClick={handleSearch}>
-        Analyser
+      <button
+        className={`w-full py-2 rounded ${loading ? 'bg-gray-400' : 'bg-blue-500'} text-white hover:bg-blue-600`}
+        onClick={handleStreamVideo}
+        disabled={loading}
+      >
+        {loading ? 'Chargement...' : 'Streamer la Vidéo'}
       </button>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {results.length > 0 && (
-        <div className="results">
-          <h3>Résultats :</h3>
-          <ul>
-            {results.map((video) => (
-              <li key={video.id}>
-                {video.title}
-                <button onClick={() => handlePreview(video.url)}>Prévisualiser</button>
-                <a href={video.url} target="_blank" rel="noopener noreferrer" className="download-link">Télécharger</a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {selectedVideo && (
-        <div className="video-preview">
-          <h3>Aperçu de la vidéo :</h3>
+      {error && <p className="text-red-500 mt-2">{error}</p>}
+      {videoId && (
+        <div className="mt-4">
+          <h3 className="text-lg font-semibold">Aperçu de la vidéo :</h3>
           <iframe
-            width="560"
+            width="100%"
             height="315"
-            src={selectedVideo.replace('watch?v=', 'embed/')}
-            title="Aperçu de la vidéo"
+            src={`https://www.youtube.com/embed/${videoId}`}
+            title="YouTube video player"
             frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>
         </div>

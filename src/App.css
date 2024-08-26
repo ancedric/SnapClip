@@ -1,4 +1,9 @@
-/* Body & Font */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Body & Font 
 body {
   font-family: "Arial", sans-serif;
   margin: 0;
@@ -7,7 +12,7 @@ body {
   color: #333;
 }
 
-/* Hero Section */
+/* Hero Section 
 .hero {
   background: url("https://source.unsplash.com/1600x900/?technology") no-repeat
     center center/cover;
@@ -46,7 +51,7 @@ body {
   transform: translateY(-2px);
 }
 
-/* Pricing Section */
+/* Pricing Section 
 .pricing {
   padding: 60px 20px;
   text-align: center;
@@ -87,7 +92,7 @@ body {
   margin-bottom: 1rem;
 }
 
-/* Footer */
+/* Footer 
 .footer {
   background: #333;
   color: white;
@@ -149,4 +154,4 @@ body {
   margin-left: 10px;
   color: #007bff;
   text-decoration: none;
-}
+}*/

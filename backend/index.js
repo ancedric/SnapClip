@@ -1,55 +1,50 @@
 import express from 'express';
-import cors from'cors';
-import ffmpeg from'fluent-ffmpeg';
-import ytdl from'ytdl-core';
+import cors from 'cors';
+import ytdl from 'ytdl-core';
+
 const app = express();
 // eslint-disable-next-line no-undef
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:5173' }));
 
-app.post('/analyze', async (req, res) => {
-  const { videoUrl } = req.body;
+app.post('/stream', async (req, res) => {
+    console.log('Requête reçue :', req.body);
+    const { videoUrl } = req.body;
+    console.log('URL reçue:', videoUrl);
 
-  if (!videoUrl) {
-    return res.status(400).send('URL manquante');
-  }
+    if (!videoUrl) {
+        return res.status(400).json({ error: 'URL manquante' });
+    }
 
-  try {
-    const stream = ytdl(videoUrl, { quality: 'highestvideo' });
-
-    // Configuration de FFmpeg pour analyser la vidéo
-    ffmpeg(stream)
-      // eslint-disable-next-line no-useless-escape
-      .outputOptions('-vf', 'select=gt(scene\,0.4)', '-showinfo')
-      .on('end', () => {
-        console.log('Analyse terminée.');
-      })
-      .on('error', (err) => {
-        console.error('Erreur lors de l\'analyse :', err);
-        return res.status(500).send('Erreur lors de l\'analyse');
-      })
-      .ffprobe((err, data) => {
-        if (err) {
-          return res.status(500).send('Erreur lors de l\'extraction des données');
+    try {
+        const info = await ytdl.getInfo(videoUrl);
+        const format = ytdl.chooseFormat(info.formats, { quality: 'highestvideo' });
+        
+        if (!format || !format.url) {
+            return res.status(400).json({ error: 'Impossible de trouver un format vidéo approprié' });
         }
 
-        // Exemple d'extraction de données
-        const brightness = data.streams[0].avg_frame_rate; // Ajuster selon vos besoins
-        const sceneChanges = data.streams[0].nb_frames; // Compte des frames
+        res.header('Content-Disposition', `inline; filename="${info.videoDetails.title}.mp4"`);
+        res.header('Content-Type', 'video/mp4');
 
-        res.json({
-          brightness,
-          sceneChanges,
-        });
-      })
-      .run();
-  } catch (error) {
-    res.status(500).send('Erreur lors de l\'analyse');
-  }
+        // Stream la vidéo directement
+        ytdl(videoUrl, { format: format })
+            .pipe(res)
+            .on('finish', () => {
+                console.log('Streaming terminé');
+            })
+            .on('error', (err) => {
+                console.error('Erreur lors du streaming:', err);
+                res.status(500).json({ error: 'Erreur lors du streaming de la vidéo' });
+            });
+    } catch (error) {
+        console.error('Erreur dans le bloc try:', error);
+        res.status(500).json({ error: 'Erreur lors de l\'analyse : ' + error.message });
+    }
 });
 
 app.listen(PORT, () => {
-  console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
+    console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
 });
